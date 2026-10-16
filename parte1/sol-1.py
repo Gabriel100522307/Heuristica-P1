@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera .dat, resuelve parte-1.mod con GLPK y exporta JSON y HTML.
+"""Genera .dat, resuelve parte-1.mod con GLPK y exporta JSON.
 
 Uso: python3 sol-1.py fichero-entrada fichero-salida.dat
 Dependencia: swiglpk (interfaz de Python para la biblioteca GLPK).
@@ -7,7 +7,6 @@ Dependencia: swiglpk (interfaz de Python para la biblioteca GLPK).
 
 from __future__ import annotations
 
-import html
 import json
 from pathlib import Path
 import re
@@ -124,60 +123,6 @@ def resolver(modelo: Path, dat: Path, limite_segundos: float | None = None) -> d
         glp.glp_term_out(anterior)
 
 
-def guardar_html(datos: dict, solucion: dict, path: Path) -> None:
-    esc = html.escape
-    celdas = {(a["i"], a["j"]): a["k"] for a in solucion["colocaciones"]}
-    costes_pos = {}
-    for i in range(1, datos["l"] + 1):
-        for j in range(1, datos["l"] + 1):
-            costes_pos[(i, j)] = sum(
-                datos["p"][celdas[(ip, j)] - 1] for ip in range(i + 1, datos["l"] + 1)
-            )
-
-    celdas_html = []
-    for i in range(datos["l"], 0, -1):
-        for j in range(1, datos["l"] + 1):
-            k = celdas[(i, j)]
-            posicion = f"Fila {i} · Columna {j}"
-            interior = (
-                f"<small>{posicion}</small><strong>Caja {k}</strong>"
-                f"<span>Prioridad {datos['p'][k - 1]}</span>"
-                f"<b>Coste pos. {numero(costes_pos[(i, j)])}</b>"
-            )
-            celdas_html.append(f'<div class="celda">{interior}</div>')
-
-    coste_total = sum(costes_pos.values())
-    documento = f"""<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Parte 1 · Solución del pallet</title><style>
-*{{box-sizing:border-box}}body{{margin:0;background:#f4f7fb;color:#172337;font:16px system-ui,sans-serif}}
-main{{max-width:1100px;margin:auto;padding:32px}}h1{{margin:8px 0 12px;font-size:30px}}
-.marca{{text-transform:uppercase;letter-spacing:2px;color:#276b63;font-size:12px;font-weight:700}}
-.resumen{{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}}.dato{{padding:14px 20px;background:#fff;border:1px solid #dbe3ed;border-radius:12px}}
-.dato strong{{display:block;font-size:24px}}.dato span{{font-size:13px;color:#526174}}
-section{{background:#fff;border:1px solid #dbe3ed;border-radius:16px;padding:22px;margin:20px 0}}
-.acceso{{padding:8px;background:#e1f3f0;color:#1b655a;text-align:center;font-size:13px;border-radius:7px 7px 0 0;font-weight:600}}
-.rejilla{{display:grid;grid-template-columns:repeat({datos['l']},minmax(120px,1fr));gap:8px;padding-top:8px}}
-.celda{{padding:12px;min-height:115px;border:1px solid #89c8bd;border-radius:8px;background:#f0faf7;display:flex;flex-direction:column;gap:4px;font-size:13px}}
-.celda strong{{font-size:17px}}.celda b{{margin-top:4px;color:#175b51}}small{{font-size:12px;color:#5f6f84}}
-footer{{margin-top:20px;font-size:12px;color:#64748b}}
-</style></head><body><main><div class="marca">Heurística y optimización · Parte 1</div>
-<h1>Disposición óptima en pallet de lado l = {datos['l']}</h1>
-<div class="resumen">
-  <div class="dato"><strong>{numero(solucion['objetivo'])}</strong><span>Coste medio (Z)</span></div>
-  <div class="dato"><strong>{numero(coste_total)}</strong><span>Coste total acumulado</span></div>
-  <div class="dato"><strong>{datos['n']}</strong><span>Cajas colocadas</span></div>
-  <div class="dato"><strong>{solucion['tiempo_s']} s</strong><span>Tiempo GLPK</span></div>
-</div>
-<section>
-  <div class="acceso">Punto de acceso · Fila {datos['l']}</div>
-  <div class="rejilla">{''.join(celdas_html)}</div>
-</section>
-<footer>Óptimo certificado por {esc(solucion['solver'])}. {solucion['variables']} variables y {solucion['restricciones']} restricciones.</footer>
-</main></body></html>"""
-    path.write_text(documento, encoding="utf-8")
-
-
 def ruta_argumento(texto: str) -> Path:
     path = Path(texto).expanduser()
     if path.is_absolute():
@@ -189,17 +134,15 @@ def ruta_argumento(texto: str) -> Path:
 
 def ejecutar(entrada: Path, salida_dat: Path, limite_segundos: float | None = None) -> dict:
     modelo = Path(__file__).resolve().with_name("parte-1.mod")
-    salida_html = salida_dat.with_suffix(".html")
     salida_json = salida_dat.with_suffix(".solucion.json")
     protegidos = {entrada.resolve(), modelo.resolve(), Path(__file__).resolve()}
-    if any(p.resolve() in protegidos for p in (salida_dat, salida_html, salida_json)):
+    if any(p.resolve() in protegidos for p in (salida_dat, salida_json)):
         raise ErrorModelo("La ruta de salida pisaria un fichero de entrada o de codigo.")
     datos = leer_entrada(entrada)
     escribir_dat(datos, salida_dat)
     solucion = resolver(modelo, salida_dat, limite_segundos)
     solucion["datos"] = datos
     salida_json.write_text(json.dumps(solucion, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    guardar_html(datos, solucion, salida_html)
     return solucion
 
 

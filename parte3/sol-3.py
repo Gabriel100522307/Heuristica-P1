@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Genera .dat, resuelve parte-3.mod con GLPK y exporta JSON y HTML."""
+"""Genera .dat, resuelve parte-3.mod con GLPK y exporta JSON.
+
+Uso: python3 sol-3.py fichero-entrada fichero-salida.dat
+Dependencia: swiglpk (interfaz de Python para la biblioteca GLPK).
+"""
 
 from __future__ import annotations
 
-import html
 import json
 import math
 from pathlib import Path
@@ -142,68 +145,6 @@ def resolver(modelo: Path, dat: Path, limite_segundos: float | None = 15.0) -> d
         glp.glp_term_out(anterior)
 
 
-def guardar_html(datos: dict, solucion: dict, path: Path) -> None:
-    esc = html.escape
-    celdas = {(a["i"], a["j"], a["z"]): a["k"] for a in solucion["colocaciones"]}
-    costes = {(a["i"], a["j"], a["z"]): a["coste"] for a in solucion["costes_posicion"]}
-    niveles_html = []
-    for z in range(1, datos["h"] + 1):
-        celdas_html = []
-        for i in range(datos["l"], 0, -1):
-            for j in range(1, datos["l"] + 1):
-                clave = (i, j, z)
-                k = celdas.get(clave)
-                posicion = f"Fila {i} · Columna {j}"
-                if k is None:
-                    interior = f"<small>{posicion}</small><span>Vacío</span>"
-                    clase = "celda vacia"
-                else:
-                    interior = (
-                        f"<small>{posicion}</small><strong>Caja {k}</strong>"
-                        f"<span>Prioridad {datos['p'][k - 1]}</span>"
-                        f"<span>Peso {numero(datos['peso'][k - 1])} g</span>"
-                        f"<span>Capacidad {numero(datos['capacidad'][k - 1])} g</span>"
-                        f"<b>Coste {numero(costes.get(clave, 0))}</b>"
-                    )
-                    clase = "celda"
-                celdas_html.append(f'<div class="{clase}">{interior}</div>')
-        niveles_html.append(
-            f'<article class="nivel"><h3>Nivel {z}'
-            + (' · base' if z == 1 else '')
-            + f'</h3><div class="acceso">Acceso · fila {datos["l"]}</div>'
-            + f'<div class="rejilla" style="--lado:{datos["l"]}">'
-            + "".join(celdas_html)
-            + "</div></article>"
-        )
-
-    documento = f"""<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Parte 3 · Pallets incompletos</title><style>
-*{{box-sizing:border-box}}body{{margin:0;background:#f4f7fb;color:#172337;font:16px system-ui,sans-serif}}
-main{{max-width:1400px;margin:auto;padding:32px}}h1{{margin:8px 0 12px;font-size:30px}}h3{{margin:0 0 10px;font-size:18px}}
-.marca{{text-transform:uppercase;letter-spacing:2px;color:#276b63;font-size:12px;font-weight:700}}
-.resumen{{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}}.dato{{padding:14px 20px;background:#fff;border:1px solid #dbe3ed;border-radius:12px}}
-.dato strong{{display:block;font-size:24px}}.dato span{{font-size:13px;color:#526174}}
-section{{background:#fff;border:1px solid #dbe3ed;border-radius:16px;padding:22px;margin:20px 0}}
-.niveles{{display:flex;flex-wrap:wrap;gap:24px}}.nivel{{max-width:100%;overflow:auto}}.acceso{{padding:8px;background:#e1f3f0;color:#1b655a;text-align:center;font-size:13px;border-radius:7px 7px 0 0;font-weight:600}}
-.rejilla{{display:grid;grid-template-columns:repeat(var(--lado),minmax(120px,1fr));gap:8px;padding-top:8px}}
-.celda{{padding:12px;min-height:140px;border:1px solid #89c8bd;border-radius:8px;background:#f0faf7;display:flex;flex-direction:column;gap:4px;font-size:12px}}
-.celda strong{{font-size:17px}}.celda b{{margin-top:4px;color:#175b51}}.vacia{{background:#f7f8fa;border:1px dashed #c5cfdc;color:#7b8798}}
-.vacia>span{{margin:auto;text-align:center}}small{{font-size:12px;color:#5f6f84}}
-footer{{margin-top:20px;font-size:12px;color:#64748b}}
-</style></head><body><main><div class="marca">Heurística y optimización · Parte 3</div>
-<h1>Optimización de pallets incompletos (l = {datos['l']}, h = {datos['h']}, n = {datos['n']})</h1>
-<div class="resumen">
-  <div class="dato"><strong>{numero(solucion['objetivo'])}</strong><span>Coste medio (Z)</span></div>
-  <div class="dato"><strong>{datos['n']}</strong><span>Cajas dispuestas</span></div>
-  <div class="dato"><strong>{solucion['tiempo_s']} s</strong><span>Tiempo GLPK</span></div>
-</div>
-<section><h2>Distribución por niveles</h2><div class="niveles">{''.join(niveles_html)}</div></section>
-<footer>Óptimo certificado por {esc(solucion['solver'])}. {solucion['variables']} variables y {solucion['restricciones']} restricciones.</footer>
-</main></body></html>"""
-    path.write_text(documento, encoding="utf-8")
-
-
 def ruta_argumento(texto: str) -> Path:
     path = Path(texto).expanduser()
     if path.is_absolute():
@@ -215,17 +156,15 @@ def ruta_argumento(texto: str) -> Path:
 
 def ejecutar(entrada: Path, salida_dat: Path, limite_segundos: float | None = 15.0) -> dict:
     modelo = Path(__file__).resolve().with_name("parte-3.mod")
-    salida_html = salida_dat.with_suffix(".html")
     salida_json = salida_dat.with_suffix(".solucion.json")
     protegidos = {entrada.resolve(), modelo.resolve(), Path(__file__).resolve()}
-    if any(p.resolve() in protegidos for p in (salida_dat, salida_html, salida_json)):
+    if any(p.resolve() in protegidos for p in (salida_dat, salida_json)):
         raise ErrorModelo("La ruta de salida pisaria un fichero de entrada o de codigo.")
     datos = leer_entrada(entrada)
     escribir_dat(datos, salida_dat)
     solucion = resolver(modelo, salida_dat, limite_segundos)
     solucion["datos"] = datos
     salida_json.write_text(json.dumps(solucion, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    guardar_html(datos, solucion, salida_html)
     return solucion
 
 

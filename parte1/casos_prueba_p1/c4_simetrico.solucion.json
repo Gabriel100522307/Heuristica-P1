@@ -4,7 +4,7 @@
   "variables": 81,
   "restricciones": 27,
   "objetivo": 5.0,
-  "tiempo_s": 0.001002,
+  "tiempo_s": 0.000852,
   "colocaciones": [
     {
       "i": 2,
