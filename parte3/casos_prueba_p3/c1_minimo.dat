@@ -1,0 +1,14 @@
+data;
+param l := 1;
+param h := 1;
+param n := 1;
+param p :=
+  1 5
+;
+param peso :=
+  1 10
+;
+param capacidad :=
+  1 50
+;
+end;
