@@ -1,0 +1,22 @@
+{
+  "estado": "OPTIMO",
+  "solver": "GLPK 5.0",
+  "variables": 1,
+  "restricciones": 2,
+  "objetivo": 0.0,
+  "tiempo_s": 0.000532,
+  "colocaciones": [
+    {
+      "i": 1,
+      "j": 1,
+      "k": 1
+    }
+  ],
+  "datos": {
+    "l": 1,
+    "n": 1,
+    "p": [
+      5
+    ]
+  }
+}

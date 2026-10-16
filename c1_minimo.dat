@@ -1,0 +1,7 @@
+data;
+param l := 1;
+param n := 1;
+param p :=
+  1 5
+;
+end;

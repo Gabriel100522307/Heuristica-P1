@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parte 1 · Solución del pallet</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f4f7fb;color:#172337;font:16px system-ui,sans-serif}
+main{max-width:1100px;margin:auto;padding:32px}h1{margin:8px 0 12px;font-size:30px}
+.marca{text-transform:uppercase;letter-spacing:2px;color:#276b63;font-size:12px;font-weight:700}
+.resumen{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}.dato{padding:14px 20px;background:#fff;border:1px solid #dbe3ed;border-radius:12px}
+.dato strong{display:block;font-size:24px}.dato span{font-size:13px;color:#526174}
+section{background:#fff;border:1px solid #dbe3ed;border-radius:16px;padding:22px;margin:20px 0}
+.acceso{padding:8px;background:#e1f3f0;color:#1b655a;text-align:center;font-size:13px;border-radius:7px 7px 0 0;font-weight:600}
+.rejilla{display:grid;grid-template-columns:repeat(1,minmax(120px,1fr));gap:8px;padding-top:8px}
+.celda{padding:12px;min-height:115px;border:1px solid #89c8bd;border-radius:8px;background:#f0faf7;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.celda strong{font-size:17px}.celda b{margin-top:4px;color:#175b51}small{font-size:12px;color:#5f6f84}
+footer{margin-top:20px;font-size:12px;color:#64748b}
+</style></head><body><main><div class="marca">Heurística y optimización · Parte 1</div>
+<h1>Disposición óptima en pallet de lado l = 1</h1>
+<div class="resumen">
+  <div class="dato"><strong>0</strong><span>Coste medio (Z)</span></div>
+  <div class="dato"><strong>0</strong><span>Coste total acumulado</span></div>
+  <div class="dato"><strong>1</strong><span>Cajas colocadas</span></div>
+  <div class="dato"><strong>0.000532 s</strong><span>Tiempo GLPK</span></div>
+</div>
+<section>
+  <div class="acceso">Punto de acceso · Fila 1</div>
+  <div class="rejilla"><div class="celda"><small>Fila 1 · Columna 1</small><strong>Caja 1</strong><span>Prioridad 5</span><b>Coste pos. 0</b></div></div>
+</section>
+<footer>Óptimo certificado por GLPK 5.0. 1 variables y 2 restricciones.</footer>
+</main></body></html>
