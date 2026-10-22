@@ -1,8 +1,3 @@
-/* =========================================================================
- * Práctica 1: Programación Lineal - Heurística y Optimización (UC3M)
- * Parte 3: Optimización de pallets incompletos (parte-3.mod)
- * ========================================================================= */
-
 param l, integer, >= 1;
 param h, integer, >= 1;
 param n, integer, >= 1, <= h * l * l;
