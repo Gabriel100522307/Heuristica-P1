@@ -1,37 +1,40 @@
-/* --- PARÁMETROS ESCALARES --- */
-param l, integer, >= 1;              /* Longitud del lado del pallet */
-param n, integer, >= 1, == l * l;    /* Número total de cajas (pallet lleno) */
+# Parte 1: montaje en un unico nivel de un pallet completo.
+# X[i,j,k]: caja k en fila i y columna j.
+# Las filas mayores estan mas cerca del acceso.
 
-/* --- CONJUNTOS --- */
-set FILAS    := 1..l;                /* Filas del pallet (l = más cercana al acceso) */
-set COLUMNAS := 1..l;                /* Columnas del pallet */
-set CAJAS    := 1..n;                /* Identificadores de las cajas */
+param l, integer, >= 1;
+# Se puede indicar n en el .dat; si se omite, se calcula automaticamente.
+param n, integer, >= 1, default l*l;
 
-/* --- PARÁMETROS VECTORIALES --- */
-param p{CAJAS}, integer, >= 1;       /* Prioridad de cada caja k (menor valor = mayor prioridad) */
+set FILAS := 1..l;
+set COLUMNAS := 1..l;
+set CAJAS := 1..n;
 
-/* --- VARIABLES DE DECISIÓN --- */
-/* X[i,j,k] = 1 si la caja k se coloca en la fila i y columna j; 0 en caso contrario */
+param p{CAJAS}, integer, >= 1;
+
+# En este apartado se ocupan todas las posiciones.
+check n = l*l;
+
 var X{FILAS, COLUMNAS, CAJAS}, binary;
 
-/* --- FUNCIÓN OBJETIVO --- */
-/* Minimizar el coste medio de disposición de las n cajas en el pallet */
-minimize Coste_Medio:
-    (1 / n) * sum{i in FILAS, j in COLUMNAS, ip in (i + 1)..l, k in CAJAS} p[k] * X[ip, j, k];
+# Coste medio: suma de prioridades delante de cada posicion, dividida entre n.
+minimize CosteMedio:
+    (1 / n) * sum{i in FILAS, j in COLUMNAS,
+                  ip in FILAS, k in CAJAS: ip > i}
+        p[k] * X[ip,j,k];
 
-/* --- RESTRICCIONES --- */
+# 1. Cada caja ocupa exactamente una posicion.
+s.t. CajaUnaVez{k in CAJAS}:
+    sum{i in FILAS, j in COLUMNAS} X[i,j,k] = 1;
 
-/* Restricción 1: Cada caja k debe ocupar exactamente una posición en el pallet */
-s.t. Una_Posicion_Por_Caja{k in CAJAS}:
-    sum{i in FILAS, j in COLUMNAS} X[i, j, k] = 1;
+# 2. Cada posicion contiene exactamente una caja.
+s.t. PosicionUnaCaja{i in FILAS, j in COLUMNAS}:
+    sum{k in CAJAS} X[i,j,k] = 1;
 
-/* Restricción 2: Cada posición (i,j) del pallet debe contener exactamente una caja */
-s.t. Una_Caja_Por_Posicion{i in FILAS, j in COLUMNAS}:
-    sum{k in CAJAS} X[i, j, k] = 1;
+# 3. i > r: la fila i esta delante y debe tener prioridad numerica menor o igual.
+s.t. OrdenPrioridades{j in COLUMNAS, r in FILAS, i in FILAS: r < i}:
+    sum{k in CAJAS} p[k] * X[i,j,k]
+    <= sum{k in CAJAS} p[k] * X[r,j,k];
 
-/* Restricción 3: En una misma columna j, las cajas más cercanas al acceso (fila i > t)
- * deben tener mayor o igual prioridad (valor numérico menor o igual) */
-s.t. Orden_Prioridad{j in COLUMNAS, t in FILAS, i in FILAS: t < i}:
-    sum{k in CAJAS} p[k] * X[i, j, k] <= sum{k in CAJAS} p[k] * X[t, j, k];
-
+solve;
 end;

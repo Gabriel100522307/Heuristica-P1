@@ -1,47 +1,50 @@
 # Parte 2: montaje volumetrico de un pallet completo.
-# X[i,j,z,k] = 1 si la caja k ocupa la posicion (i,j,z).
-# Las filas con mayor i estan delante. El suelo corresponde a z = 1.
-# Ejecucion: glpsol -m parte-2.mod -d datos.dat -o solucion.txt
+# X[i,j,z,k]: caja k en fila i, columna j y nivel z.
+# Las filas mayores estan mas cerca del acceso; el suelo es z = 1.
 
 param l, integer, >= 1;
 param h, integer, >= 1;
 # Se puede indicar n en el .dat; si se omite, se calcula automaticamente.
 param n, integer, >= 1, default h*l*l;
 
-param p{1..n}, integer, >= 1;
-param peso{1..n}, >= 0;
-param capacidad{1..n}, >= 0;
+set FILAS := 1..l;
+set COLUMNAS := 1..l;
+set NIVELES := 1..h;
+set CAJAS := 1..n;
+
+param p{CAJAS}, integer, >= 1;
+param peso{CAJAS}, >= 0;
+param capacidad{CAJAS}, >= 0;
 
 # En este apartado se ocupan todas las posiciones.
 check n = h*l*l;
 
-var X{1..l, 1..l, 1..h, 1..n}, binary;
+var X{FILAS, COLUMNAS, NIVELES, CAJAS}, binary;
 
 # Coste medio: suma de prioridades delante de cada posicion, dividida entre n.
 minimize CosteMedio:
-    (1 / n) * sum{i in 1..l, j in 1..l, z in 1..h,
-                  ip in i+1..l, k in 1..n}
+    (1 / n) * sum{i in FILAS, j in COLUMNAS, z in NIVELES,
+                  ip in FILAS, k in CAJAS: ip > i}
         p[k] * X[ip,j,z,k];
 
 # 1. Cada caja ocupa exactamente una posicion.
-s.t. CajaUnaVez{k in 1..n}:
-    sum{i in 1..l, j in 1..l, z in 1..h} X[i,j,z,k] = 1;
+s.t. CajaUnaVez{k in CAJAS}:
+    sum{i in FILAS, j in COLUMNAS, z in NIVELES} X[i,j,z,k] = 1;
 
 # 2. Cada posicion contiene exactamente una caja.
-s.t. PosicionUnaCaja{i in 1..l, j in 1..l, z in 1..h}:
-    sum{k in 1..n} X[i,j,z,k] = 1;
+s.t. PosicionUnaCaja{i in FILAS, j in COLUMNAS, z in NIVELES}:
+    sum{k in CAJAS} X[i,j,z,k] = 1;
 
-# 3. Para i > t, la prioridad numerica en i debe ser menor o igual.
-s.t. OrdenPrioridades{j in 1..l, z in 1..h,
-                      t in 1..l, i in 1..l: t < i}:
-    sum{k in 1..n} p[k] * X[i,j,z,k]
-    <= sum{k in 1..n} p[k] * X[t,j,z,k];
+# 3. i > r: la fila i esta delante y debe tener prioridad numerica menor o igual.
+s.t. OrdenPrioridades{j in COLUMNAS, z in NIVELES,
+                      r in FILAS, i in FILAS: r < i}:
+    sum{k in CAJAS} p[k] * X[i,j,z,k]
+    <= sum{k in CAJAS} p[k] * X[r,j,z,k];
 
-# 4. El peso de TODAS las cajas superiores no supera la capacidad de la caja.
-# En z = h, el sumatorio de pesos superiores es vacio y vale cero.
-s.t. CapacidadCarga{i in 1..l, j in 1..l, z in 1..h}:
-    sum{zp in z+1..h, kp in 1..n} peso[kp] * X[i,j,zp,kp]
-    <= sum{k in 1..n} capacidad[k] * X[i,j,z,k];
+# 4. Se cuenta todo el peso situado encima, no solo el nivel siguiente.
+s.t. CapacidadCarga{i in FILAS, j in COLUMNAS, z in NIVELES: z < h}:
+    sum{zp in NIVELES, k in CAJAS: zp > z} peso[k] * X[i,j,zp,k]
+    <= sum{k in CAJAS} capacidad[k] * X[i,j,z,k];
 
 solve;
 end;
