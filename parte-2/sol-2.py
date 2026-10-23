@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """Uso: python3 sol-2.py ejemplo.in ejemplo.dat"""
 
@@ -46,6 +45,88 @@ def ejecutar_mathprog(modelo_mod, datos_dat, salida_sol):
     if resultado.returncode != 0:
         sys.exit(resultado.stdout + resultado.stderr)
 
+def guardar_solucion_grafica(salida, texto, parte, l, h, prioridades,
+                            pesos, capacidades, objetivo):
+    """Guarda la colocacion de las cajas en una cuadricula de texto."""
+    posiciones = {}
+    cajas_encontradas = set()
+
+    # Leemos las variables X cuyo valor es 1. El patron tambien funciona
+    # cuando GLPK escribe el nombre y el valor en dos lineas distintas.
+    patron = r"^\s*\d+\s+X\[([\d,]+)\]\s+\*\s+(\S+)"
+    for indices, valor in re.findall(patron, texto, re.MULTILINE):
+        if float(valor) < 0.5:
+            continue
+        indices = list(map(int, indices.split(",")))
+
+        if parte == 1:
+            i, j, k = indices
+            z, t = 1, 1
+        elif parte in (2, 3):
+            i, j, z, k = indices
+            t = 1
+        else:
+            i, j, z, t, k = indices
+
+        posiciones[t, z, i, j] = k - 1
+        cajas_encontradas.add(k)
+
+    # No guardamos una cuadricula incompleta si no se ha leido bien el informe.
+    n = len(prioridades)
+    if len(posiciones) != n or cajas_encontradas != set(range(1, n + 1)):
+        sys.exit("Error: no se ha podido leer la colocacion de todas las cajas.")
+
+    # Quitamos el .0 de los numeros enteros y conservamos los decimales.
+    def numero(valor):
+        return str(int(valor)) if valor == int(valor) else str(valor)
+
+    if parte == 1:
+        etiquetas = [str(p) for p in prioridades]
+    else:
+        etiquetas = [
+            f"{p}/{numero(peso)}/{numero(capacidad)}"
+            for p, peso, capacidad in zip(prioridades, pesos, capacidades)
+        ]
+
+    # Ajustamos el ancho para que las columnas queden alineadas.
+    ancho = max(8, len(f"Col {l}") + 2, max(map(len, etiquetas)) + 2)
+    margen = len(f"Fila {l}") + 2
+    pallets = sorted({posicion[0] for posicion in posiciones})
+
+    with salida.open("w", encoding="utf-8") as f:
+        f.write("SOLUCION OPTIMA\n")
+        if parte != 1:
+            f.write("Cada caja se muestra como prioridad/peso/capacidad; -- indica un hueco\n")
+        f.write(f"El acceso esta junto a la fila {l}.\n\n")
+
+        for t in pallets:
+            if parte == 4:
+                f.write(f"PALLET {t}\n\n")
+
+            # Mostramos primero el nivel superior y la fila mas cercana al acceso.
+            for z in range(h, 0, -1):
+                if parte != 1:
+                    f.write(f"Nivel {z}\n")
+                f.write(" " * margen)
+                f.write("".join(f"Col {j}".rjust(ancho) for j in range(1, l + 1)))
+                f.write("\n")
+
+                for i in range(l, 0, -1):
+                    f.write(f"Fila {i}".ljust(margen))
+                    for j in range(1, l + 1):
+                        k = posiciones.get((t, z, i, j))
+                        celda = "--" if k is None else etiquetas[k]
+                        f.write(celda.rjust(ancho))
+                    f.write("\n")
+                f.write("\n")
+
+        if parte == 4:
+            f.write(f"Pallets utilizados: {len(pallets)}\n")
+            f.write(f"Coste total: {objetivo:.2f}\n")
+        else:
+            f.write(f"Coste medio: {objetivo:.2f}\n")
+
+
 # Aseguramos que se pasan exactamente 3 argumentos
 if len(sys.argv) != 3:
     sys.exit("Uso: python3 sol-2.py ejemplo.in ejemplo.dat")
@@ -55,6 +136,8 @@ entrada = ruta(sys.argv[1])
 datos = ruta(sys.argv[2])
 modelo = carpeta / "parte-2.mod"
 solucion = Path(str(datos) + ".sol.txt")
+# Cuadricula que se guarda junto al archivo .dat.
+salida_grafica = datos.with_name(datos.stem + "-solucion.txt")
 
 # Leemos el fichero .in.
 filas = [
@@ -101,6 +184,8 @@ with datos.open("w", encoding="utf-8") as f:
 
 
 # Resolvemos usando GLPK de la funcion
+# Si repetimos un caso y falla, no dejamos la cuadricula de una ejecucion anterior.
+salida_grafica.unlink(missing_ok=True)
 ejecutar_mathprog(modelo, datos, solucion)
 
 
@@ -117,6 +202,11 @@ variables = int(re.search(r"Columns:\s+(\d+)", texto).group(1))
 restricciones = int(re.search(r"Rows:\s+(\d+)", texto).group(1)) - 1
 objetivo = float(
     re.search(r"Objective:\s+\S+\s+=\s+([^\s]+)", texto).group(1)
+)
+
+# Guardamos la distribucion en el fichero de salida.
+guardar_solucion_grafica(
+    salida_grafica, texto, 2, l, h, prioridades, pesos, capacidades, objetivo
 )
 
 # Resultado.
